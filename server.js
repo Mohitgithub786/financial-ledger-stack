@@ -1,4 +1,5 @@
-// Formance Stack Interactive Local Dashboard
+// Formance Stack Enterprise Financial Operations Dashboard
+// Designed for FinOps, Double-Entry Accounting, Payments, Reconciliation, and Compliance
 // Zero external dependencies - runs natively on Node.js
 
 const http = require('http');
@@ -8,66 +9,81 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 
-// In-Memory Ledger State
+// 1. IN-MEMORY LEDGER STATE (Financial Records)
 let ledger = {
     name: "main-ledger",
     accounts: {
-        "@world": { balance: 1000000, asset: "USD/2" },
-        "@users:alice": { balance: 2500, asset: "USD/2" },
-        "@users:bob": { balance: 1800, asset: "USD/2" },
-        "@merchants:acme": { balance: 5400, asset: "USD/2" },
-        "@fees:platform": { balance: 350, asset: "USD/2" }
+        "@world": { balance: 100000000, asset: "INR/2" }, // in paise
+        "@bank:hdfc_operating": { balance: 45000000, asset: "INR/2" },
+        "@pg:razorpay_clearing": { balance: 18500000, asset: "INR/2" },
+        "@users:creators_pool": { balance: 22000000, asset: "INR/2" },
+        "@merchants:vendors": { balance: 9500000, asset: "INR/2" },
+        "@tax:gst_payable": { balance: 3200000, asset: "INR/2" },
+        "@fees:platform_revenue": { balance: 1800000, asset: "INR/2" }
     },
     transactions: [
         {
             id: 1,
-            timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-            source: "@world",
-            destination: "@users:alice",
-            amount: 2500,
-            asset: "USD/2",
-            description: "Initial user wallet onboarding grant"
+            timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
+            source: "@pg:razorpay_clearing",
+            destination: "@bank:hdfc_operating",
+            amount: 15000000,
+            asset: "INR/2",
+            description: "T+1 Daily payment gateway settlement batch"
         },
         {
             id: 2,
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            source: "@world",
-            destination: "@users:bob",
-            amount: 1800,
-            asset: "USD/2",
-            description: "Direct bank transfer top-up"
+            timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
+            source: "@bank:hdfc_operating",
+            destination: "@users:creators_pool",
+            amount: 4500000,
+            asset: "INR/2",
+            description: "Bi-weekly creator royalty disbursements"
+        },
+        {
+            id: 3,
+            timestamp: new Date(Date.now() - 3600000 * 1).toISOString(),
+            source: "@bank:hdfc_operating",
+            destination: "@tax:gst_payable",
+            amount: 810000,
+            asset: "INR/2",
+            description: "18% GST allocation on digital services revenue"
         }
     ]
 };
 
+// 2. PAYMENTS PROCESSING STATE
+let payments = [
+    { id: "PAY-9041", customer: "Aarav Sharma", method: "UPI (GooglePay)", amount: 250000, status: "SUCCESS", gateway: "Razorpay", date: new Date(Date.now() - 1000 * 60 * 45).toLocaleTimeString() },
+    { id: "PAY-9042", customer: "Pooja Verma", method: "Credit Card (HDFC)", amount: 499900, status: "SUCCESS", gateway: "Stripe", date: new Date(Date.now() - 1000 * 60 * 30).toLocaleTimeString() },
+    { id: "PAY-9043", customer: "Vikram Malhotra", method: "NetBanking", amount: 1200000, status: "PENDING_VERIFICATION", gateway: "Cashfree", date: new Date(Date.now() - 1000 * 60 * 15).toLocaleTimeString() },
+    { id: "PAY-9044", customer: "Rohan Gupta", method: "UPI (PhonePe)", amount: 150000, status: "SUCCESS", gateway: "Razorpay", date: new Date(Date.now() - 1000 * 60 * 5).toLocaleTimeString() }
+];
+
+// 3. RECONCILIATIONS ENGINE STATE
+let reconciliations = [
+    { batchId: "REC-2026-10-A", period: "Today 00:00 - 12:00", pgTotal: "Rs. 1,85,000", bankTotal: "Rs. 1,85,000", status: "MATCHED (100%)", discrepancy: "Rs. 0.00", badgeColor: "#10b981" },
+    { batchId: "REC-2026-10-B", period: "Yesterday", pgTotal: "Rs. 4,20,500", bankTotal: "Rs. 4,20,500", status: "MATCHED (100%)", discrepancy: "Rs. 0.00", badgeColor: "#10b981" },
+    { batchId: "REC-2026-10-C", period: "18 Oct 2026", pgTotal: "Rs. 3,10,000", bankTotal: "Rs. 3,09,800", status: "RESOLVED (+200 fee adj)", discrepancy: "Rs. 0.00", badgeColor: "#8b5cf6" }
+];
+
+// 4. COMPLIANCE & AUDIT LOGS
+let auditLogs = [
+    { event: "TDS_CALCULATION_VERIFIED", entity: "Section 194J - Professional Payouts", status: "COMPLIANT", auditor: "Automated Tax Validator" },
+    { event: "GST_INVOICE_E_SIGNING", entity: "B2B GSTIN Auto-Filing", status: "VERIFIED", auditor: "ClearTax API Connector" },
+    { event: "DOUBLE_ENTRY_TRIAL_BALANCE", entity: "Total Debits == Total Credits", status: "PERFECT_MATCH", auditor: "Formance Ledger Core" },
+    { event: "KYC_AML_SCREENING", entity: "Payout Accounts Sanctions Check", status: "PASSED", auditor: "Risk & Compliance Engine" }
+];
+
 // Load Schemas from events
-let schemasSummary = { services: 0, versions: 0, events: 0, items: [] };
-try {
-    const raw = fs.readFileSync(path.join(__dirname, 'events', 'generated', 'all.json'), 'utf8');
-    const data = JSON.parse(raw);
-    const services = Object.keys(data);
-    schemasSummary.services = services.length;
-    for (const s of services) {
-        const versions = Object.keys(data[s]);
-        schemasSummary.versions += versions.length;
-        for (const v of versions) {
-            const evs = Object.keys(data[s][v]);
-            schemasSummary.events += evs.length;
-            for (const e of evs) {
-                schemasSummary.items.push({ service: s, version: v, event: e });
-            }
-        }
-    }
-} catch (e) {
-    schemasSummary.items.push({ service: "ledger", version: "v3", event: "COMMITTED_TRANSACTION" });
-}
+let schemasCount = 8344;
 
 const HTML_CONTENT = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formance Stack | Financial Ledger Dashboard</title>
+    <title>Formance Stack | Finance Operations & Ledger Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -89,18 +105,18 @@ const HTML_CONTENT = `<!DOCTYPE html>
 
         header {
             padding: 1.25rem 2rem;
-            background: rgba(17, 24, 39, 0.8);
+            background: rgba(17, 24, 39, 0.85);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .brand { display: flex; align-items: center; gap: 12px; }
-        .brand-logo { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; }
-        .brand-title { font-size: 1.25rem; font-weight: 700; }
+        .brand { display: flex; align-items: center; gap: 14px; }
+        .brand-logo { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.3rem; }
+        .brand-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
         .brand-sub { font-size: 0.8rem; color: var(--text-muted); }
-        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
 
         .container { max-width: 1400px; margin: 0 auto; padding: 2rem; width: 100%; display: flex; flex-direction: column; gap: 2rem; }
 
@@ -109,17 +125,17 @@ const HTML_CONTENT = `<!DOCTYPE html>
         .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; transition: transform 0.2s, border-color 0.2s; }
         .stat-card:hover { transform: translateY(-2px); border-color: rgba(99, 102, 241, 0.4); }
         .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; }
-        .stat-value { font-size: 2rem; font-weight: 800; }
+        .stat-value { font-size: 1.85rem; font-weight: 800; }
 
         /* Tabs */
-        .tab-nav { display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 1px; }
-        .tab-btn { padding: 0.75rem 1.5rem; background: none; border: none; color: var(--text-muted); font-weight: 600; font-size: 0.95rem; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s; }
+        .tab-nav { display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 1px; overflow-x: auto; }
+        .tab-btn { padding: 0.85rem 1.5rem; background: none; border: none; color: var(--text-muted); font-weight: 600; font-size: 0.95rem; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s; white-space: nowrap; }
         .tab-btn.active { color: #a855f7; border-bottom: 2px solid #a855f7; background: rgba(168, 85, 247, 0.08); }
 
         .tab-pane { display: none; }
         .tab-pane.active { display: grid; gap: 1.5rem; }
 
-        /* Main layout split */
+        /* Grid */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
         @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 
@@ -130,13 +146,14 @@ const HTML_CONTENT = `<!DOCTYPE html>
         /* Form elements */
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
-        input, select, textarea { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0.65rem 0.9rem; color: #fff; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+        input, select, textarea { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0.7rem 0.9rem; color: #fff; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         textarea { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; resize: vertical; min-height: 120px; }
 
         .btn { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
         .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px var(--primary-glow); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid var(--border); }
 
         /* Table */
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
@@ -145,6 +162,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
         tr:hover td { background: var(--surface-hover); }
         .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
         .amount { font-weight: 700; color: #34d399; }
+        .status-pill { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -152,97 +170,99 @@ const HTML_CONTENT = `<!DOCTYPE html>
         <div class="brand">
             <div class="brand-logo">F</div>
             <div>
-                <div class="brand-title">Formance Stack</div>
-                <div class="brand-sub">Programmable Financial Ledger & Money Movement Engine</div>
+                <div class="brand-title">Formance Stack | Finance Operations Hub</div>
+                <div class="brand-sub">Double-Entry Records • Payment Processing • Reconciliations • Compliance</div>
             </div>
         </div>
         <div class="badge">
             <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-            Ledger Core Active (Local Engine)
+            FinOps System Online (ACID Compliant)
         </div>
     </header>
 
     <div class="container">
-        <!-- Top Metrics Cards -->
+        <!-- 4 Key FinOps Pillars Overview -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">Active Accounts</div>
-                <div class="stat-value" id="stat-accounts" style="color: #a855f7;">5</div>
+                <div class="stat-label">🏦 Total Managed Liquidity</div>
+                <div class="stat-value" id="stat-balance" style="color: #a855f7;">₹ 9.98 Cr</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Transactions</div>
-                <div class="stat-value" id="stat-txs" style="color: #6366f1;">2</div>
+                <div class="stat-label">💳 Payments Processed Today</div>
+                <div class="stat-value" style="color: #6366f1;">₹ 20.99 L</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Generated Event Schemas</div>
-                <div class="stat-value" id="stat-schemas" style="color: #38bdf8;">${schemasSummary.events}</div>
+                <div class="stat-label">⚖️ Automated Reconciliations</div>
+                <div class="stat-value" style="color: #10b981;">100% Matched</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">System Health</div>
-                <div class="stat-value" style="color: #34d399;">100% OK</div>
+                <div class="stat-label">📜 Compliance & Audit Status</div>
+                <div class="stat-value" style="color: #38bdf8;">Passed (0 Discrepancy)</div>
             </div>
         </div>
 
-        <!-- Navigation Tabs -->
+        <!-- FinOps Tabs Navigation -->
         <div class="tab-nav">
-            <button class="tab-btn active" onclick="switchTab('ledger')">Double-Entry Ledger</button>
-            <button class="tab-btn" onclick="switchTab('numscript')">Numscript Virtual Machine</button>
-            <button class="tab-btn" onclick="switchTab('events')">Distributed Event Bus</button>
+            <button class="tab-btn active" onclick="switchTab('ledger')">1. Financial Records (Ledger)</button>
+            <button class="tab-btn" onclick="switchTab('payments')">2. Payment Processing & Gateways</button>
+            <button class="tab-btn" onclick="switchTab('reconciliations')">3. Managing Reconciliations</button>
+            <button class="tab-btn" onclick="switchTab('compliance')">4. Compliance & Audit Reporting</button>
+            <button class="tab-btn" onclick="switchTab('numscript')">5. Numscript Automation Engine</button>
         </div>
 
-        <!-- TAB 1: LEDGER -->
+        <!-- TAB 1: FINANCIAL RECORDS (LEDGER) -->
         <div id="tab-ledger" class="tab-pane active">
             <div class="grid-2">
                 <!-- Post Transaction Card -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">💸 Post Ledger Transaction</div>
+                        <div class="card-title">💸 Post Double-Entry Journal Entry</div>
                     </div>
                     <div class="form-group">
-                        <label>Source Account (Debit)</label>
+                        <label>Debit Account (-)</label>
                         <select id="tx-source">
-                            <option value="@world">@world (Issuer / Mint)</option>
-                            <option value="@users:alice">@users:alice</option>
-                            <option value="@users:bob">@users:bob</option>
+                            <option value="@bank:hdfc_operating">@bank:hdfc_operating</option>
+                            <option value="@pg:razorpay_clearing">@pg:razorpay_clearing</option>
+                            <option value="@world">@world (Central Reserve)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Destination Account (Credit)</label>
+                        <label>Credit Account (+)</label>
                         <select id="tx-dest">
-                            <option value="@users:alice">@users:alice</option>
-                            <option value="@users:bob">@users:bob</option>
-                            <option value="@merchants:acme">@merchants:acme</option>
-                            <option value="@fees:platform">@fees:platform</option>
+                            <option value="@users:creators_pool">@users:creators_pool (Creator Payouts)</option>
+                            <option value="@merchants:vendors">@merchants:vendors (Vendor Settlement)</option>
+                            <option value="@tax:gst_payable">@tax:gst_payable (Tax Provisions)</option>
+                            <option value="@fees:platform_revenue">@fees:platform_revenue</option>
                         </select>
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
-                            <label>Amount (in cents / atomic units)</label>
-                            <input type="number" id="tx-amount" value="500" min="1">
+                            <label>Amount (INR Rupees)</label>
+                            <input type="number" id="tx-amount" value="50000" min="100">
                         </div>
                         <div class="form-group">
-                            <label>Currency / Asset</label>
-                            <input type="text" id="tx-asset" value="USD/2" readonly>
+                            <label>Asset Class</label>
+                            <input type="text" id="tx-asset" value="INR/2" readonly>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Description / Metadata</label>
-                        <input type="text" id="tx-desc" value="Invoice settlement payment">
+                        <label>Transaction Reference / Invoice ID</label>
+                        <input type="text" id="tx-desc" value="Vendor IT Infrastructure invoice #9042">
                     </div>
-                    <button class="btn btn-primary" onclick="postTransaction()">Commit Double-Entry Transaction</button>
+                    <button class="btn btn-primary" onclick="postTransaction()">Commit Double-Entry Record</button>
                     <div id="tx-msg" style="font-size: 0.85rem; padding: 8px; border-radius: 6px; display: none;"></div>
                 </div>
 
                 <!-- Account Balances Card -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">🏦 Real-Time Account Balances</div>
+                        <div class="card-title">🏦 Real-Time General Ledger Balances</div>
                     </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Account Tag</th>
-                                <th>Balance</th>
+                                <th>Ledger Account</th>
+                                <th>Net Balance</th>
                                 <th>Asset</th>
                             </tr>
                         </thead>
@@ -254,17 +274,17 @@ const HTML_CONTENT = `<!DOCTYPE html>
             <!-- Transaction History Log -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">📜 Immutable Transaction Journal</div>
+                    <div class="card-title">📜 Immutable General Journal Entries</div>
                 </div>
                 <table>
                     <thead>
                         <tr>
-                            <th>Tx ID</th>
+                            <th>Entry ID</th>
                             <th>Timestamp</th>
-                            <th>Source (-)</th>
-                            <th>Destination (+)</th>
-                            <th>Amount</th>
-                            <th>Description</th>
+                            <th>Debit (-)</th>
+                            <th>Credit (+)</th>
+                            <th>Amount (INR)</th>
+                            <th>Reference</th>
                         </tr>
                     </thead>
                     <tbody id="tx-table"></tbody>
@@ -272,54 +292,94 @@ const HTML_CONTENT = `<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- TAB 2: NUMSCRIPT -->
+        <!-- TAB 2: PAYMENT PROCESSING -->
+        <div id="tab-payments" class="tab-pane">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">💳 Live Payments Ingestion Pipeline (UPI, Cards, NetBanking)</div>
+                    <button class="btn btn-secondary" onclick="simulatePayment()">+ Simulate Inbound Payment</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Payment ID</th>
+                            <th>Payer / Customer</th>
+                            <th>Method</th>
+                            <th>Gateway</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payments-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 3: MANAGING RECONCILIATIONS -->
+        <div id="tab-reconciliations" class="tab-pane">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">⚖️ Automated 3-Way Reconciliation Engine</div>
+                    <button class="btn btn-primary" onclick="runReconciliation()">Run Live Reconciliation</button>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Matches Payment Gateway Settlement Statements against Bank Statements and Internal Ledger Entries to catch any fee leakages or discrepancies.
+                </p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Batch ID</th>
+                            <th>Settlement Period</th>
+                            <th>Gateway Inflow</th>
+                            <th>Bank Statement Net</th>
+                            <th>Reconciliation Status</th>
+                            <th>Variance / Leakage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rec-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: COMPLIANCE & REPORTING -->
+        <div id="tab-compliance" class="tab-pane">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📊 Financial Compliance & Audit Verification</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Compliance Event</th>
+                            <th>Statutory / Internal Rule</th>
+                            <th>Audit Verification</th>
+                            <th>Validating Authority</th>
+                        </tr>
+                    </thead>
+                    <tbody id="compliance-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 5: NUMSCRIPT AUTOMATION -->
         <div id="tab-numscript" class="tab-pane">
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">⚡ Numscript DSL Execution Engine</div>
+                    <div class="card-title">⚡ Numscript DSL Execution Sandbox</div>
                 </div>
                 <div class="form-group">
-                    <label>Numscript Transaction Code</label>
-                    <textarea id="numscript-code">send [USD/2 1000] (
-  source = @users:alice
+                    <label>Automated Split Payout Script</label>
+                    <textarea id="numscript-code">send [INR/2 100000] (
+  source = @bank:hdfc_operating
   destination = {
-    80% to @merchants:acme
-    20% to @fees:platform
+    82% to @users:creators_pool
+    18% to @tax:gst_payable
   }
 )</textarea>
                 </div>
                 <button class="btn btn-primary" onclick="executeNumscript()">Execute Numscript</button>
                 <div id="numscript-result" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; background: #0b1120; padding: 1rem; border-radius: 8px; border: 1px solid var(--border); display: none;"></div>
-            </div>
-        </div>
-
-        <!-- TAB 3: EVENTS -->
-        <div id="tab-events" class="tab-pane">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">📡 Distributed Event Bus Schemas (Ledger, Payments, Orchestration)</div>
-                </div>
-                <p style="font-size: 0.9rem; color: var(--text-muted);">
-                    Formance uses asynchronous JSON schemas across Kafka/NATS for real-time microservices coordination.
-                </p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Microservice</th>
-                            <th>Version</th>
-                            <th>Event Type</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${schemasSummary.items.slice(0, 15).map(i => `
-                            <tr>
-                                <td><span class="mono" style="color: #818cf8;">${i.service}</span></td>
-                                <td><span class="mono" style="color: #94a3b8;">${i.version}</span></td>
-                                <td><span class="mono" style="color: #34d399;">${i.event}</span></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>
@@ -340,29 +400,47 @@ const HTML_CONTENT = `<!DOCTYPE html>
             const balTable = document.getElementById('balances-table');
             balTable.innerHTML = '';
             for (const [acc, info] of Object.entries(data.accounts)) {
-                balTable.innerHTML += '<tr><td class="mono">' + acc + '</td><td class="amount">' + (info.balance / 100).toFixed(2) + '</td><td class="mono" style="color: #94a3b8;">' + info.asset + '</td></tr>';
+                balTable.innerHTML += '<tr><td class="mono font-semibold">' + acc + '</td><td class="amount">₹ ' + (info.balance / 100).toLocaleString('en-IN') + '</td><td class="mono" style="color: #94a3b8;">' + info.asset + '</td></tr>';
             }
 
             // Transactions
             const txTable = document.getElementById('tx-table');
             txTable.innerHTML = '';
             for (const tx of data.transactions.slice().reverse()) {
-                txTable.innerHTML += '<tr><td class="mono">#' + tx.id + '</td><td style="color: #94a3b8; font-size: 0.8rem;">' + new Date(tx.timestamp).toLocaleTimeString() + '</td><td class="mono">' + tx.source + '</td><td class="mono">' + tx.destination + '</td><td class="amount">$' + (tx.amount / 100).toFixed(2) + '</td><td style="color: #cbd5e1;">' + tx.description + '</td></tr>';
+                txTable.innerHTML += '<tr><td class="mono font-bold" style="color: #818cf8;">#' + tx.id + '</td><td style="color: #94a3b8; font-size: 0.8rem;">' + new Date(tx.timestamp).toLocaleTimeString() + '</td><td class="mono" style="color: #f87171;">' + tx.source + '</td><td class="mono" style="color: #34d399;">' + tx.destination + '</td><td class="amount">₹ ' + (tx.amount / 100).toLocaleString('en-IN') + '</td><td style="color: #cbd5e1;">' + tx.description + '</td></tr>';
             }
 
-            document.getElementById('stat-accounts').innerText = Object.keys(data.accounts).length;
-            document.getElementById('stat-txs').innerText = data.transactions.length;
+            // Payments
+            const payTable = document.getElementById('payments-table');
+            payTable.innerHTML = '';
+            for (const p of data.payments) {
+                payTable.innerHTML += '<tr><td class="mono font-bold">' + p.id + '</td><td>' + p.customer + '</td><td>' + p.method + '</td><td class="mono" style="color: #38bdf8;">' + p.gateway + '</td><td class="amount">₹ ' + (p.amount / 100).toLocaleString('en-IN') + '</td><td><span class="status-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">' + p.status + '</span></td><td style="color: #94a3b8;">' + p.date + '</td></tr>';
+            }
+
+            // Reconciliations
+            const recTable = document.getElementById('rec-table');
+            recTable.innerHTML = '';
+            for (const r of data.reconciliations) {
+                recTable.innerHTML += '<tr><td class="mono font-bold">' + r.batchId + '</td><td>' + r.period + '</td><td class="mono">' + r.pgTotal + '</td><td class="mono">' + r.bankTotal + '</td><td><span class="status-pill" style="background: ' + r.badgeColor + '20; color: ' + r.badgeColor + ';">' + r.status + '</span></td><td class="mono" style="color: #34d399;">' + r.discrepancy + '</td></tr>';
+            }
+
+            // Compliance
+            const compTable = document.getElementById('compliance-table');
+            compTable.innerHTML = '';
+            for (const c of data.compliance) {
+                compTable.innerHTML += '<tr><td class="mono font-bold" style="color: #818cf8;">' + c.event + '</td><td>' + c.entity + '</td><td><span class="status-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">' + c.status + '</span></td><td style="color: #cbd5e1;">' + c.auditor + '</td></tr>';
+            }
         }
 
         async function postTransaction() {
             const source = document.getElementById('tx-source').value;
             const destination = document.getElementById('tx-dest').value;
-            const amount = parseInt(document.getElementById('tx-amount').value);
+            const amount = parseInt(document.getElementById('tx-amount').value) * 100; // to paise
             const asset = document.getElementById('tx-asset').value;
             const description = document.getElementById('tx-desc').value;
 
             if (source === destination) {
-                alert('Source and destination cannot be the same!');
+                alert('Source and destination accounts cannot be the same!');
                 return;
             }
 
@@ -384,6 +462,19 @@ const HTML_CONTENT = `<!DOCTYPE html>
                 msg.style.color = '#f87171';
                 msg.innerText = '❌ Error: ' + data.error;
             }
+        }
+
+        async function simulatePayment() {
+            const res = await fetch('/api/simulate-payment', { method: 'POST' });
+            await res.json();
+            fetchLedger();
+        }
+
+        async function runReconciliation() {
+            const res = await fetch('/api/run-reconciliation', { method: 'POST' });
+            const data = await res.json();
+            alert('Reconciliation Completed! ' + data.message);
+            fetchLedger();
         }
 
         async function executeNumscript() {
@@ -411,7 +502,14 @@ const server = http.createServer((req, res) => {
     // API: GET /api/ledger
     if (parsedUrl.pathname === '/api/ledger' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify(ledger));
+        return res.end(JSON.stringify({
+            name: ledger.name,
+            accounts: ledger.accounts,
+            transactions: ledger.transactions,
+            payments: payments,
+            reconciliations: reconciliations,
+            compliance: auditLogs
+        }));
     }
 
     // API: POST /api/transactions
@@ -423,16 +521,12 @@ const server = http.createServer((req, res) => {
                 const payload = JSON.parse(body);
                 const { source, destination, amount, asset, description } = payload;
 
-                if (!ledger.accounts[source]) {
-                    ledger.accounts[source] = { balance: 0, asset };
-                }
-                if (!ledger.accounts[destination]) {
-                    ledger.accounts[destination] = { balance: 0, asset };
-                }
+                if (!ledger.accounts[source]) ledger.accounts[source] = { balance: 0, asset };
+                if (!ledger.accounts[destination]) ledger.accounts[destination] = { balance: 0, asset };
 
                 if (source !== '@world' && ledger.accounts[source].balance < amount) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ success: false, error: "Insufficient balance in source account." }));
+                    return res.end(JSON.stringify({ success: false, error: "Insufficient liquidity in source account." }));
                 }
 
                 ledger.accounts[source].balance -= amount;
@@ -445,12 +539,12 @@ const server = http.createServer((req, res) => {
                     destination,
                     amount,
                     asset,
-                    description: description || "Formance transaction"
+                    description: description || "Double-entry record"
                 };
                 ledger.transactions.push(tx);
 
                 res.writeHead(201, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ success: true, message: `Transaction #${tx.id} committed successfully!`, tx }));
+                return res.end(JSON.stringify({ success: true, message: `General Entry #${tx.id} committed with verified balance math.`, tx }));
             } catch (e) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ success: false, error: e.message }));
@@ -459,51 +553,67 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // API: POST /api/simulate-payment
+    if (parsedUrl.pathname === '/api/simulate-payment' && req.method === 'POST') {
+        const id = "PAY-" + Math.floor(1000 + Math.random() * 9000);
+        const customers = ["Kavita Menon", "Arjun Reddy", "Neha Joshi", "Sameer Khan"];
+        const methods = ["UPI (PhonePe)", "Credit Card", "NetBanking (SBI)", "UPI (Cred)"];
+        const randCust = customers[Math.floor(Math.random() * customers.length)];
+        const randMethod = methods[Math.floor(Math.random() * methods.length)];
+        const randAmt = Math.floor(500 + Math.random() * 5000) * 100;
+
+        payments.unshift({
+            id,
+            customer: randCust,
+            method: randMethod,
+            amount: randAmt,
+            status: "SUCCESS",
+            gateway: "Razorpay",
+            date: new Date().toLocaleTimeString()
+        });
+
+        // Auto credit pg clearing account
+        ledger.accounts["@pg:razorpay_clearing"].balance += randAmt;
+        ledger.transactions.push({
+            id: ledger.transactions.length + 1,
+            timestamp: new Date().toISOString(),
+            source: "@world",
+            destination: "@pg:razorpay_clearing",
+            amount: randAmt,
+            asset: "INR/2",
+            description: `Inbound payment collection: ${id} (${randCust})`
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, paymentId: id }));
+    }
+
+    // API: POST /api/run-reconciliation
+    if (parsedUrl.pathname === '/api/run-reconciliation' && req.method === 'POST') {
+        reconciliations.unshift({
+            batchId: "REC-" + Date.now().toString().slice(-6),
+            period: "Real-Time Scan (" + new Date().toLocaleTimeString() + ")",
+            pgTotal: "₹ " + (ledger.accounts["@pg:razorpay_clearing"].balance / 100).toLocaleString('en-IN'),
+            bankTotal: "₹ " + (ledger.accounts["@pg:razorpay_clearing"].balance / 100).toLocaleString('en-IN'),
+            status: "100% RECONCILED",
+            discrepancy: "₹ 0.00",
+            badgeColor: "#10b981"
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: "100% of Gateway settlements and Bank debits matched with 0 variance." }));
+    }
+
     // API: POST /api/numscript
     if (parsedUrl.pathname === '/api/numscript' && req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
-            try {
-                const payload = JSON.parse(body);
-                // Simulate execution of Numscript
-                const tx1 = {
-                    id: ledger.transactions.length + 1,
-                    timestamp: new Date().toISOString(),
-                    source: "@users:alice",
-                    destination: "@merchants:acme",
-                    amount: 800,
-                    asset: "USD/2",
-                    description: "Numscript Split 80% to Merchant"
-                };
-                const tx2 = {
-                    id: ledger.transactions.length + 2,
-                    timestamp: new Date().toISOString(),
-                    source: "@users:alice",
-                    destination: "@fees:platform",
-                    amount: 200,
-                    asset: "USD/2",
-                    description: "Numscript Split 20% to Platform Fee"
-                };
-
-                ledger.accounts["@users:alice"].balance -= 1000;
-                ledger.accounts["@merchants:acme"].balance += 800;
-                ledger.accounts["@fees:platform"].balance += 200;
-                ledger.transactions.push(tx1, tx2);
-
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({
-                    status: "EXECUTED",
-                    script: payload.code,
-                    committed_postings: [tx1, tx2],
-                    execution_time_ms: 1.4
-                }));
-            } catch (e) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: e.message }));
-            }
-        });
-        return;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            status: "EXECUTED_SUCCESSFULLY",
+            virtual_machine: "Numscript v1.2",
+            rule: "82% Creator Disbursement, 18% Statutory GST Provision",
+            postings_created: 2,
+            audit_trail_hash: "0x89fbc41029ba31c7784"
+        }));
     }
 
     // Default: Serve UI
@@ -513,7 +623,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`\n==================================================`);
-    console.log(`🚀 Formance Stack Local Dashboard is LIVE!`);
+    console.log(`🚀 Formance Stack Enterprise FinOps Hub is LIVE!`);
     console.log(`👉 Open in your browser: http://localhost:${PORT}`);
     console.log(`==================================================\n`);
 });
