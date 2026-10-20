@@ -1,0 +1,19 @@
+{
+  "name": "financial-ledger-stack",
+  "version": "1.0.0",
+  "description": "Enterprise Finance Operations Hub & Double-Entry Ledger Infrastructure",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "fintech",
+    "ledger",
+    "double-entry",
+    "reconciliation",
+    "payments",
+    "compliance"
+  ],
+  "author": "Mohit",
+  "license": "MIT"
+}
