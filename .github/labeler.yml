@@ -1,0 +1,52 @@
+libs:
+  - changed-files:
+    - any-glob-to-any-file: "libs/*"
+openapi:
+  - changed-files:
+    - any-glob-to-any-file: "openapi/*"
+sdks:
+  - changed-files:
+    - any-glob-to-any-file: "sdks/*"
+github:
+  - changed-files:
+    - any-glob-to-any-file: ".github/*"
+
+# Apps
+'components/ledger':
+  - changed-files:
+    - any-glob-to-any-file: "components/ledger/*"
+'components/operator':
+  - changed-files:
+    - any-glob-to-any-file: "components/operator/*"
+'components/payments':
+  - changed-files:
+    - any-glob-to-any-file: "components/payments/*"
+
+# EE
+'ee/agent':
+  - changed-files:
+    - any-glob-to-any-file: "ee/agent/*"
+'ee/auth':
+  - changed-files:
+    - any-glob-to-any-file: "ee/auth/*"
+'ee/gateway':
+  - changed-files:
+    - any-glob-to-any-file: "ee/gateway/*"
+'ee/orchestration':
+  - changed-files:
+    - any-glob-to-any-file: "ee/orchestration/*"
+'ee/search':
+  - changed-files:
+    - any-glob-to-any-file: "ee/search/*"
+'ee/stargate':
+  - changed-files:
+    - any-glob-to-any-file: "ee/stargate/*"
+'ee/wallets':
+  - changed-files:
+    - any-glob-to-any-file: "ee/wallets/*"
+'ee/webhooks':
+  - changed-files:
+    - any-glob-to-any-file: "ee/webhooks/*"
+'ee/reconciliation':
+  - changed-files:
+    - any-glob-to-any-file: "ee/reconciliation/*"

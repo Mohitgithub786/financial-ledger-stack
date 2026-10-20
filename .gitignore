@@ -1,0 +1,46 @@
+.idea
+openapi/build/generate.json-e
+openapi/build/generate.json.bak
+coverage.out
+dist
+vendor
+.gitpod/_output
+.garden
+go.work
+go.work.sum
+worktrees
+
+**/*.out
+**/*.out
+**/*.test
+**/*.stats
+.direnv
+
+# moon
+.moon/cache
+.moon/docker
+.moon/bin
+.moon/go
+
+.devbox
+.cache
+.env
+
+
+# Downloaded OpenAPI specs
+components/
+.DS_Store
+node_modules/
+
+
+.kubeconfig
+
+.aws
+
+.kube
+
+# Helm
+*.tgz
+
+# AI coding assistants
+CLAUDE.md

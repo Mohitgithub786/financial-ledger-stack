@@ -1,0 +1,69 @@
+overlay: 1.0.0
+info:
+  title: Shared overlay for Formance Stack OpenAPI spec
+  version: 0.0.1
+actions:
+  # Remove the NoAuthorization securityScheme definition (injected by component merge)
+  - target: $.components.securitySchemes.NoAuthorization
+    remove: true
+
+  # Remove existing security on GET /versions and replace with empty requirement
+  - target: $.paths['/versions'].get.security
+    remove: true
+  - target: $.paths['/versions'].get
+    update:
+      security:
+        - {}
+
+  # Fix ledger_V2QueryParams.sort: replace $ref with inline definition
+  - target: $.components.schemas.ledger_V2QueryParams.properties.sort
+    update:
+      type: string
+      description: |
+        Sort results using a field name and order (ascending or descending).
+        Format: `<field>:<order>`, where `<field>` is the field name and `<order>` is either `asc` or `desc`.
+      example: "id:desc"
+  - target: $.components.schemas.ledger_V2QueryParams.properties.sort.$ref
+    remove: true
+
+  # Fix Go import cycle: tag inline cursor objects with ledger namespace
+  # so Speakeasy keeps extracted types in the ledger package instead of operations
+  - target: $.components.schemas.ledger_V2ExportersCursorResponse.properties.cursor
+    update:
+      x-speakeasy-model-namespace: ledger
+  - target: $.components.schemas.ledger_V2PipelinesCursorResponse.properties.cursor
+    update:
+      x-speakeasy-model-namespace: ledger
+
+  # Keep infrastructure endpoints in the declared Ledger v2 tag group
+  - target: $.paths['/api/ledger/_/info'].get.tags[0]
+    remove: true
+  - target: $.paths['/api/ledger/_/info'].get.tags
+    update:
+      - ledger.v2
+  - target: $.paths['/api/ledger/_/metrics'].get.tags[0]
+    remove: true
+  - target: $.paths['/api/ledger/_/metrics'].get.tags
+    update:
+      - ledger.v2
+
+  # Remove an orphaned Auth schema that is not referenced by any operation
+  - target: $.components.schemas.auth_Scope
+    remove: true
+  - target: $.components.schemas.auth_ScopeOptions
+    remove: true
+
+  # Remove the duplicated FAILED value from the legacy payment status enum
+  - target: $.components.schemas.payments_LegacyPaymentStatus.enum[14]
+    remove: true
+
+  # Preserve each component's typed default error response. Global 4XX/5XX
+  # matchers take precedence over the default schema in generated SDKs and
+  # would turn structured API errors into generic SDK errors.
+  - target: $.paths.x-speakeasy-errors
+    remove: true
+  - target: $.paths
+    update:
+      x-speakeasy-errors:
+        statusCodes:
+          - default
